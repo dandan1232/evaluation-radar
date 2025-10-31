@@ -48,7 +48,7 @@
         <div class="line"><span class="k">标题</span><span class="v" id="title">-</span></div>
         <div class="line"><span class="k">标签</span><span class="v" id="tag">-</span></div>
         <div class="line"><span class="k">提交时间</span><span class="v" id="time">-</span></div>
-        <div class="line"><span class="k">加权方式</span><span class="v">分数 × 权重 / 100</span></div>
+        <div class="line"><span class="k">计算公式</span><span class="v">蓝色：100×权重百分比；红色：自评分×权重百分比</span></div>
         <div class="line"><span class="k">数据ID</span><span class="v" id="pid">-</span></div>
         <div class="ops">
           <button id="back">返回编辑</button>
@@ -79,6 +79,13 @@
         $('#tag').textContent = p.tag||'-';
         $('#time').textContent = p.submittedAt? new Date(p.submittedAt).toLocaleString(): '-';
         $('#pid').textContent = p.id||'-';
+        const dims = p.dims||[];
+        const growth = (p.growth && p.growth.length === dims.length)
+          ? p.growth
+          : (p.weights ? p.weights.map(w=> Math.round(100 * (w/100))) : []);
+        const selfWeighted = (p.selfWeighted && p.selfWeighted.length === dims.length)
+          ? p.selfWeighted
+          : (p.weighted || ((p.scores && p.weights) ? p.scores.map((v,i)=> Math.round(v * p.weights[i] / 100)) : []));
         chart.setOption({
           backgroundColor:'transparent',
           title:{text:p.title||'', left:'center', top:8, textStyle:{color:'#e7f1ff', fontSize:16}},
@@ -91,8 +98,8 @@
             splitLine:{lineStyle:{color:'rgba(160,200,255,.25)'}}
           },
           series:[
-            {name:'原始分数', type:'radar', data:[p.scores||[]], areaStyle:{color:'rgba(34,211,238,.18)'}, lineStyle:{color:'#22d3ee'}, itemStyle:{color:'#22d3ee'}},
-            {name:'加权分数', type:'radar', data:[p.weighted||[]], areaStyle:{color:'rgba(58,134,255,.18)'}, lineStyle:{color:'#3a86ff'}, itemStyle:{color:'#3a86ff'}}
+            {name:'成长权重', type:'radar', data:[growth], areaStyle:{color:'rgba(58,134,255,.16)'}, lineStyle:{color:'#3a86ff'}, itemStyle:{color:'#3a86ff'}},
+            {name:'自我评价', type:'radar', data:[selfWeighted], areaStyle:{color:'rgba(255,77,79,.16)'}, lineStyle:{color:'#ff4d4f'}, itemStyle:{color:'#ff4d4f'}}
           ]
         });
       }
@@ -104,4 +111,3 @@
     </script>
   </body>
 </html>
-

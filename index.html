@@ -169,6 +169,48 @@
       height: 64px
     }
 
+    /* 权重输入末尾的 % 与输入框同一行显示（用包裹元素实现） */
+    .num-wrap {
+      position: relative;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .num-wrap .num {
+      padding-right: 18px;
+    }
+
+    .num-wrap .pct {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #cfe0ff;
+      opacity: .9;
+      pointer-events: none;
+    }
+
+    /* 数字输入 + % 同行展示 */
+    .num-wrap {
+      position: relative;
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .num-wrap .num {
+      padding-right: 18px;
+    }
+
+    .num-wrap .pct {
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #cfe0ff;
+      opacity: .9;
+      pointer-events: none;
+    }
+
     .num {
       width: 72px;
       max-width: 40vw;
@@ -261,8 +303,7 @@
 
 <body class="data-flow">
   <header>
-    <h1>综合素质雷达图生成器</h1>
-    <p>调整 6 个维度与独立权重，实时预览并提交到展示页</p>
+    <h1>综合素质评价量表</h1>
   </header>
 
   <main class="wrap">
@@ -276,14 +317,13 @@
         <button id="submitBtn">提交到展示页</button>
         <button id="copyBtn" class="secondary" title="复制展示页链接">复制展示链接</button>
         <button id="resetBtn" class="secondary">重置</button>
-        <div class="sum-tip sub">权重合计：<span id="weightSum" class="bad">300%</span>（需等于 100%）</div>
+        <div class="sum-tip sub">权重合计：<span id="weightSum" class="bad">300%</span>（需等于100%才可提交）</div>
       </div>
-      <div class="tips">提示：提交后会将数据保存在浏览器本地（localStorage），并跳转到展示页读取渲染。</div>
+      <!-- <div class="tips">提示：提交后会将数据保存在浏览器本地（localStorage），并跳转到展示页读取渲染。</div> -->
     </section>
 
     <section class="card chart-card">
       <div id="chart"></div>
-      <div class="tips">图例说明：原始分数 vs 按维度权重加权（分数×权重/100）。</div>
     </section>
   </main>
 
@@ -297,7 +337,7 @@
       const header = `
           <thead>
             <tr>
-              <th style="width:96px">姓名</th>
+              <th style="width:96px">/</th>
               ${dims.map(d => `<th>${d}<br><span class="sub">100分</span></th>`).join('')}
             </tr>
           </thead>`
@@ -314,9 +354,40 @@
       return `<table class="matrix">${header}<tbody>${weightRow}${scoreRow}</tbody></table>`
     }
     controls.innerHTML = buildTable()
+    function enhancePercent () {
+      dims.forEach((_, i) => {
+        const input = document.getElementById('weight' + i)
+        if (!input) return
+        const td = input.closest('td') || input.parentElement
+        if (!td) return
+        // If already wrapped, just clean up trailing text nodes like '%'
+        if (input.parentElement && input.parentElement.classList.contains('num-wrap')) {
+          let n = input.parentElement.nextSibling
+          while (n && n.nodeType === 3) {
+            if (n.textContent.trim() === '%' || n.textContent.trim() === '') { const r = n; n = n.nextSibling; r.remove() } else break
+          }
+          return
+        }
+        const wrap = document.createElement('span')
+        wrap.className = 'num-wrap'
+        td.insertBefore(wrap, input)
+        wrap.appendChild(input)
+        const pct = document.createElement('span')
+        pct.className = 'pct'
+        pct.textContent = '%'
+        wrap.appendChild(pct)
+        // Remove original trailing '%' text if present
+        let node = wrap.nextSibling
+        while (node && node.nodeType === 3) {
+          if (node.textContent.includes('%') || node.textContent.trim() === '') { const r = node; node = node.nextSibling; r.remove() } else break
+        }
+      })
+    }
+    enhancePercent()
 
     const chart = echarts.init(document.getElementById('chart'))
     function computeWeighted () { return state.scores.map((v, i) => Math.round(v * state.weights[i] / 100)) }
+    function computeGrowth () { return state.weights.map(w => Math.round(100 * (w / 100))) }
     function sumWeights () { return state.weights.reduce((a, b) => a + b, 0) }
     function refreshSumTip () {
       const s = sumWeights()
@@ -331,6 +402,7 @@
     }
     function render () {
       const weighted = computeWeighted()
+      const growth = computeGrowth()
       chart.setOption({
         backgroundColor: 'transparent',
         legend: { top: 10, textStyle: { color: '#d7e4ff' } },
@@ -340,8 +412,8 @@
           axisLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } }, splitLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } }
         },
         series: [
-          { name: '原始分数', type: 'radar', data: [state.scores], areaStyle: { color: 'rgba(34,211,238,.18)' }, lineStyle: { color: '#22d3ee' }, itemStyle: { color: '#22d3ee' } },
-          { name: '加权分数', type: 'radar', data: [weighted], areaStyle: { color: 'rgba(58,134,255,.18)' }, lineStyle: { color: '#3a86ff' }, itemStyle: { color: '#3a86ff' } }
+          { name: '成长权重', type: 'radar', data: [growth], areaStyle: { color: 'rgba(58,134,255,.16)' }, lineStyle: { color: '#3a86ff' }, itemStyle: { color: '#3a86ff' } },
+          { name: '自我评价', type: 'radar', data: [weighted], areaStyle: { color: 'rgba(255,77,79,.16)' }, lineStyle: { color: '#ff4d4f' }, itemStyle: { color: '#ff4d4f' } }
         ]
       })
       refreshSumTip()
