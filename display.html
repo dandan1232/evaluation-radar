@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>综合素质雷达图展示 - 展示页</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+    <style>
+      :root{
+        --bg:#0b1220; --panel:rgba(255,255,255,0.06); --panel-strong:rgba(255,255,255,0.12);
+        --text:#e8f0ff; --sub:#9fb7ff; --primary:#3a86ff; --cyan:#22d3ee; --glow:0 0 18px rgba(58,134,255,.45);
+      }
+      *{box-sizing:border-box} html,body{height:100%}
+      body{margin:0; color:var(--text); background:radial-gradient(1200px 600px at 70% -10%,rgba(26,54,120,.35),transparent), radial-gradient(800px 400px at -10% 30%,rgba(34,211,238,.25),transparent), var(--bg); font-family:"Segoe UI","PingFang SC","Microsoft YaHei",Helvetica,Arial,sans-serif; overflow-x:hidden}
+      .data-flow::before{content:""; position:fixed; inset:0; pointer-events:none; opacity:.35; background:repeating-linear-gradient(120deg, rgba(47,93,230,.12) 0 2px, transparent 2px 10px), repeating-linear-gradient(300deg, rgba(34,211,238,.08) 0 2px, transparent 2px 12px); animation:flow 14s linear infinite}
+      @keyframes flow{to{transform:translateX(-120px)}}
+      header{position:relative; padding:26px 18px; text-align:center; background:linear-gradient(135deg,#2740ff,#15b2ff); border-bottom:1px solid rgba(255,255,255,.12); box-shadow:var(--glow)}
+      header h1{margin:0; font-size:26px}
+      header p{margin:6px 0 0; color:#cfe0ff}
+
+      .wrap{max-width:1300px; margin:0 auto; padding:20px}
+      .grid{display:grid; grid-template-columns: 1fr 320px; gap:18px}
+      .card{background:var(--panel); border:1px solid var(--panel-strong); border-radius:16px; box-shadow:var(--glow)}
+      .chart-card{padding:10px}
+      #chart{height:640px}
+      .info{padding:14px}
+      .line{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed rgba(255,255,255,.08)}
+      .line:last-child{border-bottom:none}
+      .k{color:#cfe0ff}
+      .v{color:#a8c4ff}
+      .ops{display:flex; gap:8px; margin-top:12px}
+      button{appearance:none; border:none; cursor:pointer; padding:9px 12px; border-radius:10px; color:#0b1220; font-weight:700; background:linear-gradient(135deg,#4ea1ff,#22d3ee); box-shadow:0 8px 24px rgba(46,155,255,.35)}
+      button.secondary{color:#d7e4ff; background:transparent; border:1px solid rgba(148,190,255,.35)}
+      @media (max-width: 980px){.grid{grid-template-columns:1fr}}
+    </style>
+  </head>
+  <body class="data-flow">
+    <header>
+      <h1>综合素质雷达图展示</h1>
+      <p>科技蓝风格 · 本页根据 A 端提交的数据渲染</p>
+    </header>
+    <main class="wrap grid">
+      <section class="card chart-card">
+        <div id="chart"></div>
+      </section>
+      <aside class="card info">
+        <div class="line"><span class="k">标题</span><span class="v" id="title">-</span></div>
+        <div class="line"><span class="k">标签</span><span class="v" id="tag">-</span></div>
+        <div class="line"><span class="k">提交时间</span><span class="v" id="time">-</span></div>
+        <div class="line"><span class="k">加权方式</span><span class="v">分数 × 权重 / 100</span></div>
+        <div class="line"><span class="k">数据ID</span><span class="v" id="pid">-</span></div>
+        <div class="ops">
+          <button id="back">返回编辑</button>
+          <button class="secondary" id="refresh">重新读取</button>
+        </div>
+      </aside>
+    </main>
+
+    <script>
+      const $ = (s)=>document.querySelector(s);
+      function getParam(name){
+        const m = new URL(location.href).searchParams.get(name);
+        return m||'';
+      }
+      function readPayload(){
+        const id = getParam('id');
+        if(!id){ alert('缺少数据 id, 请从提交页进入'); return null; }
+        const raw = localStorage.getItem('radarPayload:'+id);
+        if(!raw){ alert('未找到本地数据, 请重新提交'); return null; }
+        try{ return JSON.parse(raw); }catch(e){ alert('数据解析失败'); return null; }
+      }
+
+      const payload = readPayload();
+      const chart = echarts.init(document.getElementById('chart'));
+      function render(p){
+        if(!p) return;
+        $('#title').textContent = p.title||'-';
+        $('#tag').textContent = p.tag||'-';
+        $('#time').textContent = p.submittedAt? new Date(p.submittedAt).toLocaleString(): '-';
+        $('#pid').textContent = p.id||'-';
+        chart.setOption({
+          backgroundColor:'transparent',
+          title:{text:p.title||'', left:'center', top:8, textStyle:{color:'#e7f1ff', fontSize:16}},
+          legend:{top:36, textStyle:{color:'#d7e4ff'}},
+          radar:{
+            shape:'polygon', radius:'68%', indicator: (p.dims||[]).map(n=>({name:n,max:100})),
+            axisName:{color:'#cfe0ff'},
+            splitArea:{areaStyle:{color:['rgba(62,119,255,0.05)','rgba(62,119,255,0.07)','rgba(62,119,255,0.08)','rgba(62,119,255,0.09)','rgba(62,119,255,0.10)']}},
+            axisLine:{lineStyle:{color:'rgba(160,200,255,.25)'}},
+            splitLine:{lineStyle:{color:'rgba(160,200,255,.25)'}}
+          },
+          series:[
+            {name:'原始分数', type:'radar', data:[p.scores||[]], areaStyle:{color:'rgba(34,211,238,.18)'}, lineStyle:{color:'#22d3ee'}, itemStyle:{color:'#22d3ee'}},
+            {name:'加权分数', type:'radar', data:[p.weighted||[]], areaStyle:{color:'rgba(58,134,255,.18)'}, lineStyle:{color:'#3a86ff'}, itemStyle:{color:'#3a86ff'}}
+          ]
+        });
+      }
+      render(payload);
+
+      $('#back').addEventListener('click',()=>{ history.length>1? history.back(): location.href='index.html'; });
+      $('#refresh').addEventListener('click',()=>{ render(readPayload()); });
+      window.addEventListener('resize', ()=> chart.resize());
+    </script>
+  </body>
+</html>
+
