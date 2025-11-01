@@ -60,8 +60,14 @@
       cursor: pointer;
       transition: background .15s ease, transform .06s ease
     }
-    .clear-all:hover { background: rgba(255, 255, 255, .12) }
-    .clear-all:active { transform: scale(.98) }
+
+    .clear-all:hover {
+      background: rgba(255, 255, 255, .12)
+    }
+
+    .clear-all:active {
+      transform: scale(.98)
+    }
 
     .wrap {
       height: calc(100% - 64px);
@@ -96,9 +102,11 @@
     }
 
     .slot-index {
-      position: absolute; top: 6px; left: 8px;
-      background: rgba(255,255,255,.14);
-      border: 1px solid rgba(255,255,255,.25);
+      position: absolute;
+      top: 6px;
+      left: 8px;
+      background: rgba(255, 255, 255, .14);
+      border: 1px solid rgba(255, 255, 255, .25);
       color: #e7f1ff;
       border-radius: 8px;
       font-size: 12px;
@@ -148,7 +156,9 @@
       border: 1px solid rgba(148, 190, 255, .35);
       border-radius: 10px;
       padding: 6px 10px;
-      cursor: pointer; z-index: 10; pointer-events: auto
+      cursor: pointer;
+      z-index: 10;
+      pointer-events: auto
     }
 
     #big {
@@ -198,7 +208,7 @@
       const dims = p.dims
       const growth = (p.growth && p.growth.length === dims.length)
         ? p.growth
-        : (p.weights ? p.weights.map(w => Math.round(60 * (w / 100))) : [])
+        : (p.weights ? p.weights.map(w => Math.round(240 * (w / 100))) : [])
       const selfWeighted = (p.selfWeighted && p.selfWeighted.length === dims.length)
         ? p.selfWeighted
         : (p.weighted || ((p.scores && p.weights) ? p.scores.map((v, i) => Math.round(v * p.weights[i] / 100)) : []))
@@ -259,7 +269,7 @@
 
     document.getElementById('close').addEventListener('click', closeModal)
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal() })
-    
+
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal() })
 
 
@@ -356,7 +366,7 @@
             if (!msg || !msg.type) return
             if (msg.type === 'payload' && msg.data) addItem(msg.data)
             if (msg.type === 'clear') clearSlots()
-          } catch {}
+          } catch { }
         }
         ws.onclose = () => { setTimeout(connectWS, 3000) }
       } catch (e) { console.warn('ws failed:', e) }
@@ -367,13 +377,13 @@
     buildSlots()
     preloadFromServer().then(() => { connectWS() })
 
-    ;(function preloadFromLocalStorage () {
-      const keys = Object.keys(localStorage).filter(k => k.startsWith('radarPayload:'))
-      for (const k of keys) {
-        const p = tryParse(localStorage.getItem(k))
-        if (p) addItem(p)
-      }
-    })()
+      ; (function preloadFromLocalStorage () {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('radarPayload:'))
+        for (const k of keys) {
+          const p = tryParse(localStorage.getItem(k))
+          if (p) addItem(p)
+        }
+      })()
 
     window.addEventListener('storage', (e) => {
       if (!e.key || !e.key.startsWith('radarPayload:')) return
@@ -389,7 +399,3 @@
 </body>
 
 </html>
-
-
-
-

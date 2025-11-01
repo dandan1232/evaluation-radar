@@ -155,14 +155,31 @@
 
     /* Adjust for shorter viewports to avoid vertical scroll */
     @media (max-height: 820px) {
-      header { padding: 18px 16px }
-      header h1 { font-size: 22px }
-      #chart { height: clamp(360px, calc(100vh - 200px), 520px) }
+      header {
+        padding: 18px 16px
+      }
+
+      header h1 {
+        font-size: 22px
+      }
+
+      #chart {
+        height: clamp(360px, calc(100vh - 200px), 520px)
+      }
     }
+
     @media (max-height: 720px) {
-      header { padding: 14px 14px }
-      header h1 { font-size: 20px }
-      #chart { height: clamp(340px, calc(100vh - 180px), 480px) }
+      header {
+        padding: 14px 14px
+      }
+
+      header h1 {
+        font-size: 20px
+      }
+
+      #chart {
+        height: clamp(340px, calc(100vh - 180px), 480px)
+      }
     }
   </style>
 </head>
@@ -202,7 +219,7 @@
       const dims = p.dims || []
       const growth = (p.growth && p.growth.length === dims.length)
         ? p.growth
-        : (p.weights ? p.weights.map(w => Math.round(60 * (w / 100))) : [])
+        : (p.weights ? p.weights.map(w => Math.round(240 * (w / 100))) : [])
       const selfWeighted = (p.selfWeighted && p.selfWeighted.length === dims.length)
         ? p.selfWeighted
         : (p.weighted || ((p.scores && p.weights) ? p.scores.map((v, i) => Math.round(v * p.weights[i] / 100)) : []))
@@ -229,7 +246,7 @@
     $('#refresh').addEventListener('click', () => {
       const p = readPayload()
       if (!p) return
-      if (chart) { try { chart.dispose() } catch (e) {} }
+      if (chart) { try { chart.dispose() } catch (e) { } }
       chart = echarts.init(document.getElementById('chart'))
       render(p)
     })

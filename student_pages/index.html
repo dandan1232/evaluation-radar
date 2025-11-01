@@ -346,7 +346,7 @@
 
     const chart = echarts.init(document.getElementById('chart'))
     function computeWeighted () { return state.scores.map((v, i) => Math.round(v * state.weights[i] / 100)) }
-    function computeGrowth () { return state.weights.map(w => Math.round(60 * (w / 100))) }
+    function computeGrowth () { return state.weights.map(w => Math.round(240 * (w / 100))) }
     function sumWeights () { return state.weights.reduce((a, b) => a + b, 0) }
     function refreshSumTip () {
       const s = sumWeights()
