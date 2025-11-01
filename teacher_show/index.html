@@ -55,7 +55,7 @@
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      grid-template-columns: repeat(6, 1fr);
       gap: 12px
     }
 
@@ -149,8 +149,11 @@
     const bigEl = document.getElementById('big')
     let bigChart = null
 
-    const items = [] // { id, el, chart, payload, ts }
-    const charts = new Map() // id -> chart
+    const items = [] // { id, el, chart, payload, ts } (legacy)
+    const charts = new Map() // id -> chart (legacy)
+    const COLS = 6
+    const SLOTS = 30
+    const slots = Array(SLOTS + 1).fill(null) // 1-based slot map: { card, el, chart, payload }
 
     function validPayload (p) {
       if (!p || !p.id) return false
@@ -229,23 +232,31 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal() })
 
 
+    function buildSlots () {
+      grid.innerHTML = ''
+      for (let i = 1; i <= SLOTS; i++) {
+        const card = document.createElement('div')
+        card.className = 'card'
+        const el = document.createElement('div')
+        el.className = 'thumb'
+        card.appendChild(el)
+        grid.appendChild(card)
+        slots[i] = { card, el, chart: null, payload: null }
+      }
+      empty.style.display = 'none'
+    }
+
     function addItem (p) {
       if (!validPayload(p)) return
-      if (charts.has(p.id)) return
-      const card = document.createElement('div')
-      card.className = 'card'
-      const el = document.createElement('div')
-      el.className = 'thumb'
-      card.appendChild(el)
-      grid.appendChild(card)
-      const chart = renderThumb(el, p)
-      charts.set(p.id, chart)
-      const ts = Date.parse(p.submittedAt || '') || Date.now()
-      items.push({ id: p.id, el, chart, payload: p, ts })
-      items.sort((a, b) => a.ts - b.ts)
-      for (const it of items) grid.appendChild(it.el.parentElement)
-      empty.style.display = 'none'
-      card.addEventListener('click', () => openModal(p))
+      const sidNum = parseInt(String(p.sid || '').replace(/[^\d]/g, ''), 10)
+      if (!(sidNum >= 1 && sidNum <= SLOTS)) return
+      const slot = slots[sidNum]
+      if (!slot) return
+      if (slot.chart) { try { slot.chart.dispose() } catch (e) { } slot.chart = null }
+      const chart = renderThumb(slot.el, p)
+      slot.chart = chart
+      slot.payload = p
+      slot.card.onclick = () => openModal(p)
     }
 
     function tryParse (raw) { try { return JSON.parse(raw) } catch { return null } }
@@ -278,6 +289,8 @@
     }
 
     // 先尝试从服务器预加载；若失败，再回退到本地存储（同浏览器多标签场景）
+    // 固定 6 列 × 5 行（共 30 个槽位），按学号 1..30 放置
+    buildSlots()
     preloadFromServer().then(() => { connectWS() })
 
     ;(function preloadFromLocalStorage () {
@@ -295,7 +308,7 @@
     })
 
     window.addEventListener('resize', () => {
-      for (const it of items) { try { it.chart.resize() } catch (e) { } }
+      for (let i = 1; i <= SLOTS; i++) { const s = slots[i]; if (s && s.chart) { try { s.chart.resize() } catch (e) { } } }
       if (bigChart) bigChart.resize()
     })
   </script>
