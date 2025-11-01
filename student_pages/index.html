@@ -498,7 +498,7 @@
     })()
 
       // 跨设备提交：在点击提交时，先把数据发送到服务器，再跳转到展示页
-      (function enhanceSubmitForMultiDevice () {
+      ;(function enhanceSubmitForMultiDevice () {
         const btn = document.getElementById('submitBtn')
         if (!btn) return
         btn.addEventListener('click', async (e) => {
