@@ -250,7 +250,37 @@
 
     function tryParse (raw) { try { return JSON.parse(raw) } catch { return null } }
 
-    (function preloadFromLocalStorage () {
+    async function preloadFromServer () {
+      try {
+        const r = await fetch('/api/list')
+        const j = await r.json().catch(() => null)
+        if (j && j.ok && Array.isArray(j.data)) {
+          for (const p of j.data) addItem(p)
+        }
+      } catch (e) {
+        console.warn('server list failed:', e)
+      }
+    }
+
+    function connectWS () {
+      try {
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws'
+        const url = `${proto}://${location.host}/ws`
+        const ws = new WebSocket(url)
+        ws.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(ev.data)
+            if (msg && msg.type === 'payload' && msg.data) addItem(msg.data)
+          } catch {}
+        }
+        ws.onclose = () => { setTimeout(connectWS, 3000) }
+      } catch (e) { console.warn('ws failed:', e) }
+    }
+
+    // 先尝试从服务器预加载；若失败，再回退到本地存储（同浏览器多标签场景）
+    preloadFromServer().then(() => { connectWS() })
+
+    ;(function preloadFromLocalStorage () {
       const keys = Object.keys(localStorage).filter(k => k.startsWith('radarPayload:'))
       for (const k of keys) {
         const p = tryParse(localStorage.getItem(k))
