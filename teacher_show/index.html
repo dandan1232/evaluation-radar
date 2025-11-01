@@ -1,0 +1,277 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>学生雷达图总览</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: rgba(255, 255, 255, .06);
+      --panel-strong: rgba(255, 255, 255, .12);
+      --text: #e8f0ff;
+      --glow: 0 0 18px rgba(58, 134, 255, .45)
+    }
+
+    * {
+      box-sizing: border-box
+    }
+
+    html,
+    body {
+      height: 100%
+    }
+
+    body {
+      margin: 0;
+      color: var(--text);
+      background: radial-gradient(1200px 600px at 70% -10%, rgba(26, 54, 120, .35), transparent), radial-gradient(800px 400px at -10% 30%, rgba(34, 211, 238, .25), transparent), var(--bg);
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Helvetica, Arial, sans-serif;
+      overflow: hidden
+    }
+
+    header {
+      position: relative;
+      padding: 18px 16px;
+      text-align: center;
+      background: linear-gradient(135deg, #2740ff, #15b2ff);
+      border-bottom: 1px solid rgba(255, 255, 255, .12);
+      box-shadow: var(--glow)
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 22px
+    }
+
+    .wrap {
+      height: calc(100% - 64px);
+      padding: 14px;
+      overflow: auto
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--panel-strong);
+      border-radius: 12px;
+      box-shadow: var(--glow);
+      padding: 8px;
+      cursor: pointer;
+      transition: transform .08s ease
+    }
+
+    .card:active {
+      transform: scale(.995)
+    }
+
+    .thumb {
+      width: 100%;
+      height: 220px
+    }
+
+    .empty {
+      text-align: center;
+      color: #9fb7ff;
+      padding: 22px
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(6, 10, 20, .65);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(2px)
+    }
+
+    .modal.open {
+      display: flex
+    }
+
+    .modal-box {
+      width: min(92vw, 1100px);
+      height: min(80vh, 720px);
+      background: rgba(20, 26, 44, .96);
+      border: 1px solid var(--panel-strong);
+      border-radius: 14px;
+      box-shadow: var(--glow);
+      position: relative;
+      padding: 10px
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      color: #cfe0ff;
+      background: transparent;
+      border: 1px solid rgba(148, 190, 255, .35);
+      border-radius: 10px;
+      padding: 6px 10px;
+      cursor: pointer; z-index: 10; pointer-events: auto
+    }
+
+    #big {
+      width: 100%;
+      height: 100%
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>学生雷达图总览</h1>
+  </header>
+  <main class="wrap">
+    <div id="empty" class="empty">等待学生提交中…（接收即展示）</div>
+    <div id="grid" class="grid"></div>
+  </main>
+  <div id="modal" class="modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-box">
+      <button class="modal-close" id="close">关闭</button>
+      <div id="big"></div>
+    </div>
+  </div>
+  <script>
+    const grid = document.getElementById('grid')
+    const empty = document.getElementById('empty')
+    const modal = document.getElementById('modal')
+    const bigEl = document.getElementById('big')
+    let bigChart = null
+
+    const items = [] // { id, el, chart, payload, ts }
+    const charts = new Map() // id -> chart
+
+    function validPayload (p) {
+      if (!p || !p.id) return false
+      if (!Array.isArray(p.dims) || !Array.isArray(p.scores) || !Array.isArray(p.weights)) return false
+      const n = p.dims.length
+      if (n === 0 || p.scores.length !== n || p.weights.length !== n) return false
+      return true
+    }
+
+    function toSeries (p) {
+      const dims = p.dims
+      const growth = (p.growth && p.growth.length === dims.length)
+        ? p.growth
+        : (p.weights ? p.weights.map(w => Math.round(100 * (w / 100))) : [])
+      const selfWeighted = (p.selfWeighted && p.selfWeighted.length === dims.length)
+        ? p.selfWeighted
+        : (p.weighted || ((p.scores && p.weights) ? p.scores.map((v, i) => Math.round(v * p.weights[i] / 100)) : []))
+      return { growth, selfWeighted }
+    }
+
+    function renderThumb (el, p) {
+      const chart = echarts.init(el)
+      const { growth, selfWeighted } = toSeries(p)
+      chart.setOption({
+        backgroundColor: 'transparent',
+        legend: { show: false },
+        radar: {
+          shape: 'polygon', radius: '70%',
+          indicator: (p.dims || []).map(n => ({ name: n, max: 100 })),
+          axisName: { color: '#cfe0ff' },
+          splitArea: { areaStyle: { color: ['rgba(62,119,255,0.05)', 'rgba(62,119,255,0.07)', 'rgba(62,119,255,0.08)', 'rgba(62,119,255,0.09)', 'rgba(62,119,255,0.10)'] } },
+          axisLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } },
+          splitLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } }
+        },
+        series: [
+          { type: 'radar', data: [growth], areaStyle: { color: 'rgba(58,134,255,.16)' }, lineStyle: { color: '#3a86ff' }, itemStyle: { color: '#3a86ff' } },
+          { type: 'radar', data: [selfWeighted], areaStyle: { color: 'rgba(255,77,79,.16)' }, lineStyle: { color: '#ff4d4f' }, itemStyle: { color: '#ff4d4f' } }
+        ]
+      })
+      return chart
+    }
+
+    function openModal (p) {
+      if (!p) return
+      if (bigChart) { try { bigChart.dispose() } catch (e) { } bigChart = null }
+      bigChart = echarts.init(bigEl)
+      const { growth, selfWeighted } = toSeries(p)
+      bigChart.setOption({
+        backgroundColor: 'transparent',
+        legend: { top: 10, textStyle: { color: '#d7e4ff' } },
+        radar: {
+          shape: 'polygon', radius: '70%',
+          indicator: (p.dims || []).map(n => ({ name: n, max: 100 })),
+          axisName: { color: '#cfe0ff' },
+          splitArea: { areaStyle: { color: ['rgba(62,119,255,0.05)', 'rgba(62,119,255,0.07)', 'rgba(62,119,255,0.08)', 'rgba(62,119,255,0.09)', 'rgba(62,119,255,0.10)'] } },
+          axisLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } },
+          splitLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } }
+        },
+        series: [
+          { name: '成长权重', type: 'radar', data: [growth], areaStyle: { color: 'rgba(58,134,255,.16)' }, lineStyle: { color: '#3a86ff' }, itemStyle: { color: '#3a86ff' } },
+          { name: '自我评价', type: 'radar', data: [selfWeighted], areaStyle: { color: 'rgba(255,77,79,.16)' }, lineStyle: { color: '#ff4d4f' }, itemStyle: { color: '#ff4d4f' } }
+        ]
+      })
+      modal.classList.add('open')
+      setTimeout(() => { if (bigChart) bigChart.resize() }, 60)
+    }
+
+    function closeModal () {
+      modal.classList.remove('open')
+      if (bigChart) { try { bigChart.dispose() } catch (e) { } bigChart = null }
+    }
+
+    document.getElementById('close').addEventListener('click', closeModal)
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeModal() })
+    
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal() })
+
+
+    function addItem (p) {
+      if (!validPayload(p)) return
+      if (charts.has(p.id)) return
+      const card = document.createElement('div')
+      card.className = 'card'
+      const el = document.createElement('div')
+      el.className = 'thumb'
+      card.appendChild(el)
+      grid.appendChild(card)
+      const chart = renderThumb(el, p)
+      charts.set(p.id, chart)
+      const ts = Date.parse(p.submittedAt || '') || Date.now()
+      items.push({ id: p.id, el, chart, payload: p, ts })
+      items.sort((a, b) => a.ts - b.ts)
+      for (const it of items) grid.appendChild(it.el.parentElement)
+      empty.style.display = 'none'
+      card.addEventListener('click', () => openModal(p))
+    }
+
+    function tryParse (raw) { try { return JSON.parse(raw) } catch { return null } }
+
+    (function preloadFromLocalStorage () {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith('radarPayload:'))
+      for (const k of keys) {
+        const p = tryParse(localStorage.getItem(k))
+        if (p) addItem(p)
+      }
+    })()
+
+    window.addEventListener('storage', (e) => {
+      if (!e.key || !e.key.startsWith('radarPayload:')) return
+      const p = tryParse(e.newValue)
+      if (p) addItem(p)
+    })
+
+    window.addEventListener('resize', () => {
+      for (const it of items) { try { it.chart.resize() } catch (e) { } }
+      if (bigChart) bigChart.resize()
+    })
+  </script>
+</body>
+
+</html>
+
+
+
