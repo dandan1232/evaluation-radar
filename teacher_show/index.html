@@ -214,14 +214,14 @@
         radar: {
           shape: 'polygon', radius: '70%',
           indicator: (p.dims || []).map(n => ({ name: n, max: 100 })),
-          axisName: { color: '#cfe0ff' },
-          splitArea: { areaStyle: { color: ['rgba(62,119,255,0.05)', 'rgba(62,119,255,0.07)', 'rgba(62,119,255,0.08)', 'rgba(62,119,255,0.09)', 'rgba(62,119,255,0.10)'] } },
-          axisLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } },
-          splitLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } }
+          axisName: { color: '#cfe0ff', fontSize: 18 },
+          splitArea: { show: false },
+          axisLine: { show: false },
+          splitLine: { show: false }
         },
         series: [
-          { type: 'radar', data: [growth], areaStyle: { color: 'rgba(58,134,255,.16)' }, lineStyle: { color: '#3a86ff' }, itemStyle: { color: '#3a86ff' } },
-          { type: 'radar', data: [selfWeighted], areaStyle: { color: 'rgba(255,77,79,.16)' }, lineStyle: { color: '#ff4d4f' }, itemStyle: { color: '#ff4d4f' } }
+          { type: 'radar', data: [growth], symbol: 'none', areaStyle: { color: 'rgba(58,134,255,1)' }, lineStyle: { width: 0 }, itemStyle: { color: '#3a86ff' } },
+          { type: 'radar', data: [selfWeighted], symbol: 'none', areaStyle: { color: 'rgba(255,77,79,1)' }, lineStyle: { width: 0 }, itemStyle: { color: '#ff4d4f' } }
         ]
       })
       return chart
@@ -238,14 +238,14 @@
         radar: {
           shape: 'polygon', radius: '70%',
           indicator: (p.dims || []).map(n => ({ name: n, max: 100 })),
-          axisName: { color: '#cfe0ff' },
-          splitArea: { areaStyle: { color: ['rgba(62,119,255,0.05)', 'rgba(62,119,255,0.07)', 'rgba(62,119,255,0.08)', 'rgba(62,119,255,0.09)', 'rgba(62,119,255,0.10)'] } },
-          axisLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } },
-          splitLine: { lineStyle: { color: 'rgba(160,200,255,.25)' } }
+          axisName: { color: '#cfe0ff', fontSize: 18 },
+          splitArea: { show: false },
+          axisLine: { show: false },
+          splitLine: { show: false }
         },
         series: [
-          { name: '成长权重', type: 'radar', data: [growth], areaStyle: { color: 'rgba(58,134,255,.16)' }, lineStyle: { color: '#3a86ff' }, itemStyle: { color: '#3a86ff' } },
-          { name: '自我评价', type: 'radar', data: [selfWeighted], areaStyle: { color: 'rgba(255,77,79,.16)' }, lineStyle: { color: '#ff4d4f' }, itemStyle: { color: '#ff4d4f' } }
+          { name: '成长权重', type: 'radar', data: [growth], symbol: 'none', areaStyle: { color: 'rgba(58,134,255,1)' }, lineStyle: { width: 0 }, itemStyle: { color: '#3a86ff' } },
+          { name: '自我评价', type: 'radar', data: [selfWeighted], symbol: 'none', areaStyle: { color: 'rgba(255,77,79,1)' }, lineStyle: { width: 0 }, itemStyle: { color: '#ff4d4f' } }
         ]
       })
       modal.classList.add('open')
