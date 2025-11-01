@@ -159,6 +159,15 @@
     render()
 
     function clampInt (v, min, max) { v = parseInt(String(v || '').replace(/[^\d-]/g, ''), 10); if (isNaN(v)) v = 0; if (v < min) v = min; if (v > max) v = max; return v }
+    // 同步输入框到内存状态，解决返回时合计显示为0的问题
+    function syncStateFromInputs () {
+      dims.forEach((_, i) => {
+        const sv = document.getElementById('score' + i)
+        const wv = document.getElementById('weight' + i)
+        if (sv) state.scores[i] = clampInt(sv.value, 0, 100)
+        if (wv) state.weights[i] = clampInt(wv.value, 0, 100)
+      })
+    }
     function preventWheelNumber (el) { el.addEventListener('wheel', e => { e.preventDefault() }, { passive: false }); el.addEventListener('keydown', e => { if (e.key === 'e' || e.key === 'E' || e.key === '+' || e.key === '-') e.preventDefault() }) }
     function attach (i) {
       const s = document.getElementById('score' + i); const w = document.getElementById('weight' + i)
@@ -169,6 +178,8 @@
       w.addEventListener('input', onWeight); w.addEventListener('change', onWeight)
     }
     dims.forEach((_, i) => attach(i))
+    // 初次加载后根据输入框值回填状态并渲染
+    syncStateFromInputs(); render()
 
     function genId () { return (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : ('radar_' + Date.now() + "_" + Math.random().toString(16).slice(2)) }
     function buildPayload () {
@@ -184,6 +195,8 @@
     document.getElementById('copyBtn').addEventListener('click', async () => { if (sumWeights() !== 100) { alert('请先将权重合计调整为 100% 再复制链接'); return } const payload = buildPayload(); const key = 'radarPayload:' + payload.id; localStorage.setItem(key, JSON.stringify(payload)); const url = location.origin + location.pathname.replace(/[^/]*$/, '') + `display.html?id=${encodeURIComponent(payload.id)}`; await copy(url); alert('展示链接已复制：\n' + url) })
     document.getElementById('resetBtn').addEventListener('click', () => { state.scores = Array(6).fill(0); state.weights = Array(6).fill(0); dims.forEach((_, i) => { document.getElementById('score' + i).value = 0; document.getElementById('weight' + i).value = 0 }); const ti = document.getElementById('titleInput'); if (ti) ti.value = '综合素质雷达图'; const tg = document.getElementById('tagInput'); if (tg) tg.value = ''; render() })
     window.addEventListener('resize', () => chart.resize()); refreshSumTip();
+    // 处理从展示页返回（history back / BFCache）时的状态同步
+    window.addEventListener('pageshow', () => { syncStateFromInputs(); render() })
   </script>
 </body>
 
