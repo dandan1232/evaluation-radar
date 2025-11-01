@@ -1,4 +1,4 @@
-# 评价雷达（evaluation-radar）
+# 综合素质评价量表雷达图（evaluation-radar）
 
 一个基于 ECharts 的“综合素质雷达图”小工具，包含：
 - 学生端：填写 6 个维度的分数与成长权重（权重总和需为 100%），实时渲染雷达图并提交。
@@ -100,6 +100,6 @@
 - 页面为纯静态 HTML + 原生 JS，无构建依赖，易于按需改版（如维度名称/数量、配色、布局等）。
 
 
-![alt text](image.png)
-![alt text](image-2.png)
-![alt text](image-1.png)
+![alt text](image-4.png)
+![alt text](image-5.png)
+![alt text](image-6.png)

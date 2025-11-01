@@ -345,8 +345,14 @@
     enhancePercent()
 
     const chart = echarts.init(document.getElementById('chart'))
-    function computeWeighted () { return state.scores.map((v, i) => Math.round(v * state.weights[i] / 100)) }
-    function computeGrowth () { return state.weights.map(w => Math.round(240 * (w / 100))) }
+    function computeWeighted () {
+      const factor = 3
+      return state.scores.map((v, i) => Math.round(factor * v * state.weights[i] / 100))
+    }
+    function computeGrowth () {
+      const factor = 3
+      return state.weights.map(w => Math.round(factor * (100 * (w / 100)))) // = factor * w
+    }
     function sumWeights () { return state.weights.reduce((a, b) => a + b, 0) }
     function refreshSumTip () {
       const s = sumWeights()

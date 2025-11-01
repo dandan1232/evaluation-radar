@@ -205,13 +205,14 @@
     }
 
     function toSeries (p) {
-      const dims = p.dims
-      const growth = (p.growth && p.growth.length === dims.length)
-        ? p.growth
-        : (p.weights ? p.weights.map(w => Math.round(240 * (w / 100))) : [])
-      const selfWeighted = (p.selfWeighted && p.selfWeighted.length === dims.length)
-        ? p.selfWeighted
-        : (p.weighted || ((p.scores && p.weights) ? p.scores.map((v, i) => Math.round(v * p.weights[i] / 100)) : []))
+      const dims = p.dims || []
+      const weights = Array.isArray(p.weights) ? p.weights : []
+      const scores = Array.isArray(p.scores) ? p.scores : []
+      const factor = 3
+      const growth = (weights.length === dims.length) ? weights.map(w => Math.round(factor * (100 * (w / 100)))) : [] // = factor * w
+      const selfWeighted = (scores.length === dims.length && weights.length === dims.length)
+        ? scores.map((v, i) => Math.round(factor * v * weights[i] / 100))
+        : []
       return { growth, selfWeighted }
     }
 
