@@ -74,7 +74,7 @@
 
     .wrap {
       display: grid;
-      grid-template-columns: 720px 1fr;
+      grid-template-columns: 420px 1fr;
       gap: 20px;
       padding: 22px;
       max-width: 1300px;
@@ -160,7 +160,7 @@
       background: rgba(255, 255, 255, .04);
       color: #dbe7ff;
       font-weight: 600;
-      width: 96px;
+      width: 120px;
       text-align: center
     }
 
@@ -254,7 +254,8 @@
     }
 
     #chart {
-      height: 560px;
+      /* Bigger radar: fit most of viewport height */
+      height: clamp(600px, calc(100vh - 220px), 900px);
       width: 100%
     }
 
@@ -466,6 +467,34 @@
         render()
       }, { capture: true })
       refreshSumTip()
+    })()
+
+    // 4) 构建竖向表格（横纵交换）：维度为行，列为“成长权重 / 自我评分”
+    function buildTableVertical () {
+      const header = `
+          <thead>
+            <tr>
+              <th style="width:120px">维度</th>
+              <th>成长权重<br><span class="sub">%</span></th>
+              <th>自我评分<br><span class="sub">100分</span></th>
+            </tr>
+          </thead>`
+      const rows = dims.map((d, i) => `
+          <tr>
+            <th>${d}</th>
+            <td><input id="weight${i}" class="num" type="number" min="0" max="100" step="1" inputmode="numeric" pattern="\\d*" value="${state.weights[i]}" /></td>
+            <td><input id="score${i}" class="num" type="number" min="0" max="100" step="1" inputmode="numeric" pattern="\\d*" value="${state.scores[i]}" /></td>
+          </tr>`).join('')
+      return `<table class="matrix">${header}<tbody>${rows}</tbody></table>`
+    }
+
+    ;(function rebuildVerticalMatrix () {
+      const wrap = document.getElementById('controls')
+      if (!wrap) return
+      wrap.innerHTML = buildTableVertical()
+      enhancePercent()
+      dims.forEach((_, i) => attach(i))
+      syncStateFromInputs(); render(); refreshSumTip()
     })()
 
       // 跨设备提交：在点击提交时，先把数据发送到服务器，再跳转到展示页
