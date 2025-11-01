@@ -43,6 +43,16 @@ app.get('/api/list', (req, res) => {
   res.json({ ok: true, data: arr });
 });
 
+app.post('/api/clear', (req, res) => {
+  try {
+    store.clear();
+    broadcast('clear', null);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: 'clear failed' });
+  }
+});
+
 // Static hosting for convenience
 const root = path.resolve(__dirname, '..');
 app.use(express.static(root));

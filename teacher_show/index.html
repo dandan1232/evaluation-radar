@@ -47,6 +47,22 @@
       font-size: 22px
     }
 
+    /* clear-all button in header */
+    .clear-all {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      color: #cfe0ff;
+      background: rgba(255, 255, 255, .08);
+      border: 1px solid rgba(148, 190, 255, .35);
+      border-radius: 10px;
+      padding: 6px 12px;
+      cursor: pointer;
+      transition: background .15s ease, transform .06s ease
+    }
+    .clear-all:hover { background: rgba(255, 255, 255, .12) }
+    .clear-all:active { transform: scale(.98) }
+
     .wrap {
       height: calc(100% - 64px);
       padding: 14px;
@@ -145,6 +161,7 @@
 <body>
   <header>
     <h1>学生雷达图总览</h1>
+    <button id="clearAll" class="clear-all" title="清空所有数据">一键清除</button>
   </header>
   <main class="wrap">
     <div id="empty" class="empty">等待学生提交中…（接收即展示）</div>
@@ -246,6 +263,43 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal() })
 
 
+    function clearSlots () {
+      // Dispose charts and reset all slots
+      for (let i = 1; i <= SLOTS; i++) {
+        const s = slots[i]
+        if (!s) continue
+        if (s.chart) { try { s.chart.dispose() } catch (e) { } s.chart = null }
+        s.payload = null
+        s.card.onclick = null
+        // remove any canvas content inside the thumb
+        s.el.innerHTML = ''
+      }
+    }
+
+    async function clearAllData () {
+      if (!confirm('确定清除所有数据吗？该操作不可恢复。')) return
+      // 1) clear local UI and storage
+      closeModal()
+      clearSlots()
+      try {
+        const keys = Object.keys(localStorage).filter(k => k.startsWith('radarPayload:'))
+        for (const k of keys) localStorage.removeItem(k)
+      } catch (e) { console.warn('localStorage clear failed:', e) }
+      // 2) ask server (if available) to clear in-memory store
+      try { await fetch('/api/clear', { method: 'POST' }) } catch (e) { /* silent */ }
+      // 3) small feedback
+      const btn = document.getElementById('clearAll')
+      if (btn) {
+        const orig = btn.textContent
+        btn.disabled = true
+        btn.textContent = '已清除'
+        setTimeout(() => { btn.disabled = false; btn.textContent = orig }, 1000)
+      }
+    }
+
+    document.getElementById('clearAll').addEventListener('click', clearAllData)
+
+
     function buildSlots () {
       grid.innerHTML = ''
       for (let i = 1; i <= SLOTS; i++) {
@@ -299,7 +353,9 @@
         ws.onmessage = (ev) => {
           try {
             const msg = JSON.parse(ev.data)
-            if (msg && msg.type === 'payload' && msg.data) addItem(msg.data)
+            if (!msg || !msg.type) return
+            if (msg.type === 'payload' && msg.data) addItem(msg.data)
+            if (msg.type === 'clear') clearSlots()
           } catch {}
         }
         ws.onclose = () => { setTimeout(connectWS, 3000) }
