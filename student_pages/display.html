@@ -202,7 +202,7 @@
       const dims = p.dims || []
       const growth = (p.growth && p.growth.length === dims.length)
         ? p.growth
-        : (p.weights ? p.weights.map(w => Math.round(100 * (w / 100))) : [])
+        : (p.weights ? p.weights.map(w => Math.round(60 * (w / 100))) : [])
       const selfWeighted = (p.selfWeighted && p.selfWeighted.length === dims.length)
         ? p.selfWeighted
         : (p.weighted || ((p.scores && p.weights) ? p.scores.map((v, i) => Math.round(v * p.weights[i] / 100)) : []))
