@@ -196,7 +196,7 @@
     }
 
     const payload = readPayload()
-    const chart = echarts.init(document.getElementById('chart'))
+    let chart = echarts.init(document.getElementById('chart'))
     function render (p) {
       if (!p) return
       const dims = p.dims || []
@@ -226,7 +226,13 @@
     render(payload)
 
     $('#back').addEventListener('click', () => { history.length > 1 ? history.back() : location.href = 'index.html' })
-    $('#refresh').addEventListener('click', () => { render(readPayload()) })
+    $('#refresh').addEventListener('click', () => {
+      const p = readPayload()
+      if (!p) return
+      if (chart) { try { chart.dispose() } catch (e) {} }
+      chart = echarts.init(document.getElementById('chart'))
+      render(p)
+    })
     window.addEventListener('resize', () => chart.resize());
   </script>
 </body>
