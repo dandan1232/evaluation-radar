@@ -450,7 +450,7 @@
       if (!act) return
       act.innerHTML = `
         <label for="studentId" class="sid-label">‼️输入序号：</label>
-        <input id="studentId" class="num" type="text" inputmode="numeric" pattern="\\d*" placeholder="必填" />
+        <input id="studentId" class="num" type="text" inputmode="numeric" pattern="\\d*" placeholder="1-35" />
         <div class="spacer"></div>
         <button id="submitBtn">提交并展示页</button>
         <button id="resetBtn" class="secondary">重置</button>
@@ -536,7 +536,9 @@
           e.stopImmediatePropagation()
           if (sumWeights() !== 100) { alert('请将成长权重各项数值调整为合计 100%'); return }
           const sidEl = document.getElementById('studentId'); const sidVal = sidEl ? digitsOnly(sidEl.value) : ''
-          if (!sidVal) { alert('请填写学号（仅数字）'); return }
+          if (!sidVal) { alert('请填写学号（1-35，仅数字）'); return }
+          const sidNum = parseInt(sidVal, 10)
+          if (!(sidNum >= 1 && sidNum <= 35)) { alert('学号需为 1-35 之间的整数'); return }
           const payload = buildPayload()
           try {
             await fetch('/api/submit', {
