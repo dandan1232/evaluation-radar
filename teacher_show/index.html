@@ -190,11 +190,8 @@
     const bigEl = document.getElementById('big')
     let bigChart = null
 
-    const items = [] // { id, el, chart, payload, ts } (legacy)
-    const charts = new Map() // id -> chart (legacy)
-    const COLS = 6
-    const SLOTS = 30
-    const slots = Array(SLOTS + 1).fill(null) // 1-based slot map: { card, el, chart, payload }
+    // 顺序展示：按提交时间依次追加卡片
+    const list = [] // { id, card, el, chart, payload }
 
     function validPayload (p) {
       if (!p || !p.id) return false
@@ -274,24 +271,20 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal() })
 
 
-    function clearSlots () {
-      // Dispose charts and reset all slots
-      for (let i = 1; i <= SLOTS; i++) {
-        const s = slots[i]
-        if (!s) continue
-        if (s.chart) { try { s.chart.dispose() } catch (e) { } s.chart = null }
-        s.payload = null
-        s.card.onclick = null
-        // remove any canvas content inside the thumb
-        s.el.innerHTML = ''
+    function clearAllUI () {
+      for (const it of list) {
+        if (it.chart) { try { it.chart.dispose() } catch (e) { } it.chart = null }
       }
+      list.length = 0
+      grid.innerHTML = ''
+      empty.style.display = ''
     }
 
     async function clearAllData () {
       if (!confirm('确定清除所有数据吗？该操作不可恢复。')) return
       // 1) clear local UI and storage
       closeModal()
-      clearSlots()
+      clearAllUI()
       try {
         const keys = Object.keys(localStorage).filter(k => k.startsWith('radarPayload:'))
         for (const k of keys) localStorage.removeItem(k)
@@ -311,35 +304,26 @@
     document.getElementById('clearAll').addEventListener('click', clearAllData)
 
 
-    function buildSlots () {
-      grid.innerHTML = ''
-      for (let i = 1; i <= SLOTS; i++) {
-        const card = document.createElement('div')
-        card.className = 'card'
-        const badge = document.createElement('span')
-        badge.className = 'slot-index'
-        badge.textContent = i
-        card.appendChild(badge)
-        const el = document.createElement('div')
-        el.className = 'thumb'
-        card.appendChild(el)
-        grid.appendChild(card)
-        slots[i] = { card, el, chart: null, payload: null }
-      }
-      empty.style.display = 'none'
-    }
+    function ensureNotEmpty () { empty.style.display = 'none' }
 
     function addItem (p) {
       if (!validPayload(p)) return
-      const sidNum = parseInt(String(p.sid || '').replace(/[^\d]/g, ''), 10)
-      if (!(sidNum >= 1 && sidNum <= SLOTS)) return
-      const slot = slots[sidNum]
-      if (!slot) return
-      if (slot.chart) { try { slot.chart.dispose() } catch (e) { } slot.chart = null }
-      const chart = renderThumb(slot.el, p)
-      slot.chart = chart
-      slot.payload = p
-      slot.card.onclick = () => openModal(p)
+      ensureNotEmpty()
+      const card = document.createElement('div')
+      card.className = 'card'
+      const badge = document.createElement('span')
+      badge.className = 'slot-index'
+      const sidText = (p.sid && String(p.sid).trim()) ? String(p.sid).trim() : '-'
+      badge.textContent = sidText
+      card.appendChild(badge)
+      const el = document.createElement('div')
+      el.className = 'thumb'
+      card.appendChild(el)
+      grid.appendChild(card)
+      const chart = renderThumb(el, p)
+      const item = { id: p.id, card, el, chart, payload: p }
+      list.push(item)
+      card.onclick = () => openModal(p)
     }
 
     function tryParse (raw) { try { return JSON.parse(raw) } catch { return null } }
@@ -349,6 +333,7 @@
         const r = await fetch('/api/list')
         const j = await r.json().catch(() => null)
         if (j && j.ok && Array.isArray(j.data)) {
+          // 服务器已按 submittedAt 升序排序，这里直接按顺序追加
           for (const p of j.data) addItem(p)
         }
       } catch (e) {
@@ -366,7 +351,7 @@
             const msg = JSON.parse(ev.data)
             if (!msg || !msg.type) return
             if (msg.type === 'payload' && msg.data) addItem(msg.data)
-            if (msg.type === 'clear') clearSlots()
+            if (msg.type === 'clear') clearAllUI()
           } catch { }
         }
         ws.onclose = () => { setTimeout(connectWS, 3000) }
@@ -374,16 +359,18 @@
     }
 
     // 先尝试从服务器预加载；若失败，再回退到本地存储（同浏览器多标签场景）
-    // 固定 6 列 × 5 行（共 30 个槽位），按学号 1..30 放置
-    buildSlots()
     preloadFromServer().then(() => { connectWS() })
 
       ; (function preloadFromLocalStorage () {
+        // 本地存储顺序不确定；按 submittedAt 升序排序后追加
         const keys = Object.keys(localStorage).filter(k => k.startsWith('radarPayload:'))
+        const arr = []
         for (const k of keys) {
           const p = tryParse(localStorage.getItem(k))
-          if (p) addItem(p)
+          if (p && validPayload(p)) arr.push(p)
         }
+        arr.sort((a, b) => (Date.parse(a.submittedAt || '') || 0) - (Date.parse(b.submittedAt || '') || 0))
+        for (const p of arr) addItem(p)
       })()
 
     window.addEventListener('storage', (e) => {
@@ -393,7 +380,7 @@
     })
 
     window.addEventListener('resize', () => {
-      for (let i = 1; i <= SLOTS; i++) { const s = slots[i]; if (s && s.chart) { try { s.chart.resize() } catch (e) { } } }
+      for (const it of list) { if (it && it.chart) { try { it.chart.resize() } catch (e) { } } }
       if (bigChart) bigChart.resize()
     })
   </script>
