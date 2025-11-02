@@ -190,8 +190,9 @@
     const bigEl = document.getElementById('big')
     let bigChart = null
 
-    // 顺序展示：按提交时间依次追加卡片
+    // 顺序展示：按提交时间依次追加卡片；去重按 id
     const list = [] // { id, card, el, chart, payload }
+    const byId = new Map() // id -> item
 
     function validPayload (p) {
       if (!p || !p.id) return false
@@ -276,6 +277,7 @@
         if (it.chart) { try { it.chart.dispose() } catch (e) { } it.chart = null }
       }
       list.length = 0
+      byId.clear()
       grid.innerHTML = ''
       empty.style.display = ''
     }
@@ -309,6 +311,20 @@
     function addItem (p) {
       if (!validPayload(p)) return
       ensureNotEmpty()
+      // 若已存在相同 id，则刷新其图表与学号标签，避免重复追加
+      if (byId.has(p.id)) {
+        const it = byId.get(p.id)
+        if (it.chart) { try { it.chart.dispose() } catch (e) { } it.chart = null }
+        // 更新学号徽标
+        const badge = it.card.querySelector('.slot-index')
+        const sidText = (p.sid && String(p.sid).trim()) ? String(p.sid).trim() : '-'
+        if (badge) badge.textContent = sidText
+        it.chart = renderThumb(it.el, p)
+        it.payload = p
+        it.card.onclick = () => openModal(p)
+        return
+      }
+      // 新增卡片
       const card = document.createElement('div')
       card.className = 'card'
       const badge = document.createElement('span')
@@ -323,6 +339,7 @@
       const chart = renderThumb(el, p)
       const item = { id: p.id, card, el, chart, payload: p }
       list.push(item)
+      byId.set(p.id, item)
       card.onclick = () => openModal(p)
     }
 
